@@ -1,0 +1,6 @@
+local RANGE = 525
+local DAMAGE = 50
+
+geame.ReplicatedStorage.ShootGun.OnServerEvent:Connect(function(Player, TargetLocation, Handle)
+
+end)

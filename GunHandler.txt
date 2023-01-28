@@ -1,0 +1,36 @@
+local Player = game.Players.LocalPlayer
+local Mouse = Player:GetMouse ()
+local Tool = script.Parent
+
+local Cooldown = false
+local COOLDOWN_TIME = 1.5
+
+local function Pew () 
+    Tool.Handle.PointLight.Enabled = true
+	game.ReplicatedStorage.ShootGun:FireServer (Mouse.Hit.p Tool.Handle)
+end
+
+local function Shoot ()
+    -- Function code.
+	
+	if Cooldown == true then
+	    return
+     end
+	 
+	 Cooldown  = true
+	 Pew ()
+	 
+	 print ("SHOOTING!)
+	 
+	 wait (COOLDOWN_TIME9
+	 Cooldown = false
+	 Tool.Handle.PointLight.Enabled = false
+end
+
+Tool.Activated:Connect (function()
+    --  This will run whenever someone clicks with the tool in their hand.
+	
+	Shoot()
+end)
+	 
+	 
