@@ -1,0 +1,143 @@
+local Tool = script.Parent
+local player
+local moving = false
+local mass, thrusting
+local CAS = game:GetService("ContextActionService")
+local maxFuel = 1000
+local fuel = Tool.CurrFuel.Value
+local gui, jetPack
+local regen = false
+local force = Instance.new("BodyVelocity")
+force.velocity = Vector3.new(0, 10, 0)
+local bodyGyro = Instance.new("BodyGyro")
+bodyGyro.P = 2000
+bodyGyro.D = 800
+bodyGyro.maxTorque = Vector3.new(bodyGyro.P, bodyGyro.P, bodyGyro.P)
+local cam, Flame
+local function equipPack()
+	jetPack = Tool.Handle:clone()
+	jetPack.CanCollide = false
+	jetPack.Name = "JetPack"
+	jetPack.Parent = game.Workspace
+	Tool.Handle.Transparency = 1
+	local welder = Instance.new("Weld")
+	welder.Part0 = jetPack
+	welder.Part1 = player.UpperTorso
+	welder.C0 = CFrame.new(Vector3.new(0, 0, -1))
+	welder.Parent = jetPack
+	Flame = Instance.new("Part")
+	Flame.Name = "Flame"
+	Flame.Transparency = 1
+	Flame.CanCollide = false
+	Flame.Locked = true
+	Flame.formFactor = 2
+	Flame.Size = Vector3.new(1, 0.4, 1)
+	Flame.Parent = jetPack
+	local Fire = Instance.new("Fire")
+	Fire.Heat = -12
+	Fire.Size = 4
+	Fire.Enabled = false
+	Fire.Parent = Flame
+	local firer = Instance.new("Weld")
+	firer.Part0 = jetPack.Flame
+	firer.Part1 = jetPack
+	firer.C0 = CFrame.new(Vector3.new(0, 2, 0))
+	firer.Parent = jetPack.Flame
+end
+local function updateGUI()
+	if gui:FindFirstChild("FuelBar") then
+		gui.FuelBar.Current.Size = UDim2.new(1, 0, -(Tool.CurrFuel.Value / maxFuel), 0)
+	end
+end
+local function regenFuel()
+	while regen do
+		if fuel < maxFuel then
+			fuel = fuel + 1
+			Tool.CurrFuel.Value = fuel
+			updateGUI()
+		end
+		wait(0.2)
+	end
+end
+local function cutEngine()
+	thrusting = false
+	jetPack.Flame.Fire.Enabled = false
+	force.velocity = Vector3.new(0, 0, 0)
+	force.Parent = nil
+	bodyGyro.Parent = nil
+end
+local function thrust()
+	if fuel > 0 then
+		thrusting = true
+		force.Parent = player.UpperTorso
+		Flame.Fire.Enabled = true
+		Tool.Handle.InitialThrust:Play()
+		bodyGyro.Parent = player.UpperTorso
+		while thrusting do
+			bodyGyro.cframe = cam.CoordinateFrame
+			force.velocity = Vector3.new(0, 20, 0)
+			fuel = fuel - 1
+			Tool.CurrFuel.Value = fuel
+			if fuel <= 0 then
+				Tool.Handle.EngineFail:Play()
+				cutEngine()
+			end
+			updateGUI()
+			wait()
+			Tool.Handle.Thrusting:Play()
+			if fuel <= 200 then
+				Tool.Handle.LowFuelWarning:Play()
+			end
+		end
+		Tool.Handle.Thrusting:Stop()
+		Tool.Handle.LowFuelWarning:Stop()
+	end
+end
+local head
+local recursiveGetMass = function(player)
+	local mass = 0
+	for i, v in pairs(player:GetDescendants()) do
+		if v:IsA("BasePart") then
+			mass = mass + v:GetMass()
+		end
+	end
+	return mass
+end
+local function mobileCompatibility(inputName, inputState)
+	if inputState == Enum.UserInputState.Begin then
+		thrust()
+	elseif inputState == Enum.UserInputState.End then
+		cutEngine()
+	end
+end
+local function onEquippedLocal(mouse)
+	player = Tool.Parent
+	mass = recursiveGetMass(player)
+	force.P = mass * 500
+	force.maxForce = Vector3.new(0, force.P, 0)
+	cam = game.Workspace.CurrentCamera
+	gui = Tool.FuelGui:Clone()
+	updateGUI()
+	gui.Parent = game.Players:GetPlayerFromCharacter(player).PlayerGui
+	equipPack()
+	mouse.Button1Down:Connect(thrust)
+	mouse.Button1Up:Connect(cutEngine)
+	CAS:BindAction("Thrust", mobileCompatibility, true)
+	CAS:SetTitle("Thrust", "Thrust")
+	regen = true
+	regenFuel()
+end
+local function onUnequippedLocal()
+	CAS:UnbindAction("Thrust")
+	regen = false
+	force:remove()
+	bodyGyro:remove()
+	gui:Destroy()
+	if jetPack ~= nil then
+		jetPack:Destroy()
+		jetPack = nil
+	end
+	Tool.Handle.Transparency = 0
+end
+Tool.Equipped:connect(onEquippedLocal)
+Tool.Unequipped:connect(onUnequippedLocal)
